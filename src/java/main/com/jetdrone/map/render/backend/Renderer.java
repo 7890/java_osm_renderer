@@ -34,6 +34,8 @@ import com.jetdrone.map.source.MapSource;
 import com.jetdrone.map.source.Node;
 import com.jetdrone.map.source.Way;
 
+import java.io.File;
+
 public class Renderer {
 
 	private static final int MIN_ZOOM_LEVEL = 12;
@@ -50,7 +52,8 @@ public class Renderer {
 			Paint paint = TEX_CACHE.get(pattern);
 			if (null == paint) {
 				try {
-					BufferedImage texture = ImageIO.read(Renderer.class.getResourceAsStream("pattern/" + pattern + ".png"));
+					//BufferedImage texture = ImageIO.read(Renderer.class.getResourceAsStream("pattern/" + pattern + ".png"));
+					BufferedImage texture = ImageIO.read(new File("resources/pattern" + pattern + ".png"));
 					paint = new TexturePaint(texture, new Rectangle2D.Float(0, 0, texture.getWidth(), texture.getHeight()));
 				} catch (IOException e) {
 					paint = color;
