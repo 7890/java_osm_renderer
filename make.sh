@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#//tb/1604
+
 FULLPATH="`pwd`/$0"
 DIR=`dirname "$FULLPATH"`
 
@@ -43,6 +45,13 @@ compile_simple-osm-render()
 	cp "$archive"/servlet-api-3.1.jar "$build"
 
 	$JAVAC -classpath "$build"/servlet-api-3.1.jar:"$build" -sourcepath "$src/java/main" -d "$build" @"$TMPFILE"
+
+	echo "create tiles:"
+	echo ""
+	echo "java -cp _build com.jetdrone.map.render.MapRender -t --zoom 14 -o tiles testdata/rule.xml testdata/amsterdam.osm"
+	echo ""
+	echo "this will create 256x256 png tiles (26) for amsterdam.osm in directory tiles (newly created)."
+	echo "the first run takes a bit longer (creating amsterdam.osm.idx, ~database of node ids)"
 }
 
 #========================================================================
