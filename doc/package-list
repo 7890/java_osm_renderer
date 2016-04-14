@@ -1,0 +1,9 @@
+com.jetdrone.map
+com.jetdrone.map.index
+com.jetdrone.map.mercator
+com.jetdrone.map.render
+com.jetdrone.map.render.backend
+com.jetdrone.map.rules
+com.jetdrone.map.rules.osm
+com.jetdrone.map.source
+com.jetdrone.map.source.osm

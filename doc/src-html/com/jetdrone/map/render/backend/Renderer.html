@@ -1,0 +1,404 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<title>Source code</title>
+<link rel="stylesheet" type="text/css" href="../../../../../../stylesheet.css" title="Style">
+</head>
+<body>
+<div class="sourceContainer">
+<pre><span class="sourceLineNo">001</span>package com.jetdrone.map.render.backend;<a name="line.1"></a>
+<span class="sourceLineNo">002</span><a name="line.2"></a>
+<span class="sourceLineNo">003</span>import static com.jetdrone.map.mercator.Mercator.coord2xy;<a name="line.3"></a>
+<span class="sourceLineNo">004</span>import static com.jetdrone.map.mercator.Mercator.lat2tiley;<a name="line.4"></a>
+<span class="sourceLineNo">005</span>import static com.jetdrone.map.mercator.Mercator.lon2tilex;<a name="line.5"></a>
+<span class="sourceLineNo">006</span>import static com.jetdrone.map.mercator.Mercator.tile2latlon;<a name="line.6"></a>
+<span class="sourceLineNo">007</span>import static java.lang.StrictMath.ceil;<a name="line.7"></a>
+<span class="sourceLineNo">008</span>import static java.lang.StrictMath.pow;<a name="line.8"></a>
+<span class="sourceLineNo">009</span><a name="line.9"></a>
+<span class="sourceLineNo">010</span>import java.awt.BasicStroke;<a name="line.10"></a>
+<span class="sourceLineNo">011</span>import java.awt.Font;<a name="line.11"></a>
+<span class="sourceLineNo">012</span>import java.awt.Graphics2D;<a name="line.12"></a>
+<span class="sourceLineNo">013</span>import java.awt.Paint;<a name="line.13"></a>
+<span class="sourceLineNo">014</span>import java.awt.Stroke;<a name="line.14"></a>
+<span class="sourceLineNo">015</span>import java.awt.TexturePaint;<a name="line.15"></a>
+<span class="sourceLineNo">016</span>import java.awt.geom.Rectangle2D;<a name="line.16"></a>
+<span class="sourceLineNo">017</span>import java.awt.image.BufferedImage;<a name="line.17"></a>
+<span class="sourceLineNo">018</span>import java.io.IOException;<a name="line.18"></a>
+<span class="sourceLineNo">019</span>import java.io.OutputStream;<a name="line.19"></a>
+<span class="sourceLineNo">020</span>import java.util.HashMap;<a name="line.20"></a>
+<span class="sourceLineNo">021</span>import java.util.List;<a name="line.21"></a>
+<span class="sourceLineNo">022</span>import java.util.Map;<a name="line.22"></a>
+<span class="sourceLineNo">023</span><a name="line.23"></a>
+<span class="sourceLineNo">024</span>import javax.imageio.ImageIO;<a name="line.24"></a>
+<span class="sourceLineNo">025</span><a name="line.25"></a>
+<span class="sourceLineNo">026</span>import com.jetdrone.map.BoundingBox;<a name="line.26"></a>
+<span class="sourceLineNo">027</span>import com.jetdrone.map.Coordinate;<a name="line.27"></a>
+<span class="sourceLineNo">028</span>import com.jetdrone.map.MapException;<a name="line.28"></a>
+<span class="sourceLineNo">029</span>import com.jetdrone.map.mercator.Mercator;<a name="line.29"></a>
+<span class="sourceLineNo">030</span>import com.jetdrone.map.rules.Draw;<a name="line.30"></a>
+<span class="sourceLineNo">031</span>import com.jetdrone.map.rules.Rule;<a name="line.31"></a>
+<span class="sourceLineNo">032</span>import com.jetdrone.map.rules.RuleSet;<a name="line.32"></a>
+<span class="sourceLineNo">033</span>import com.jetdrone.map.source.MapSource;<a name="line.33"></a>
+<span class="sourceLineNo">034</span>import com.jetdrone.map.source.Node;<a name="line.34"></a>
+<span class="sourceLineNo">035</span>import com.jetdrone.map.source.Way;<a name="line.35"></a>
+<span class="sourceLineNo">036</span><a name="line.36"></a>
+<span class="sourceLineNo">037</span>public class Renderer {<a name="line.37"></a>
+<span class="sourceLineNo">038</span><a name="line.38"></a>
+<span class="sourceLineNo">039</span>  private static final int MIN_ZOOM_LEVEL = 12;<a name="line.39"></a>
+<span class="sourceLineNo">040</span>  private static final int MAX_ZOOM_LEVEL = 18;<a name="line.40"></a>
+<span class="sourceLineNo">041</span><a name="line.41"></a>
+<span class="sourceLineNo">042</span>  private static final int DEFAULT_RESOLUTION = 256;<a name="line.42"></a>
+<span class="sourceLineNo">043</span><a name="line.43"></a>
+<span class="sourceLineNo">044</span>  // icon/pattern management<a name="line.44"></a>
+<span class="sourceLineNo">045</span>  private static final Map&lt;String, Paint&gt; TEX_CACHE = new HashMap&lt;String, Paint&gt;();<a name="line.45"></a>
+<span class="sourceLineNo">046</span>  private static final Map&lt;Integer, Font&gt; FNT_CACHE = new HashMap&lt;Integer, Font&gt;();<a name="line.46"></a>
+<span class="sourceLineNo">047</span><a name="line.47"></a>
+<span class="sourceLineNo">048</span>  private static Paint getPaint(String pattern, Paint color) {<a name="line.48"></a>
+<span class="sourceLineNo">049</span>    if (null != pattern) {<a name="line.49"></a>
+<span class="sourceLineNo">050</span>      Paint paint = TEX_CACHE.get(pattern);<a name="line.50"></a>
+<span class="sourceLineNo">051</span>      if (null == paint) {<a name="line.51"></a>
+<span class="sourceLineNo">052</span>        try {<a name="line.52"></a>
+<span class="sourceLineNo">053</span>          BufferedImage texture = ImageIO.read(Renderer.class.getResourceAsStream("pattern/" + pattern + ".png"));<a name="line.53"></a>
+<span class="sourceLineNo">054</span>          paint = new TexturePaint(texture, new Rectangle2D.Float(0, 0, texture.getWidth(), texture.getHeight()));<a name="line.54"></a>
+<span class="sourceLineNo">055</span>        } catch (IOException e) {<a name="line.55"></a>
+<span class="sourceLineNo">056</span>          paint = color;<a name="line.56"></a>
+<span class="sourceLineNo">057</span>        }<a name="line.57"></a>
+<span class="sourceLineNo">058</span>        TEX_CACHE.put(pattern, paint);<a name="line.58"></a>
+<span class="sourceLineNo">059</span>      }<a name="line.59"></a>
+<span class="sourceLineNo">060</span>      return paint;<a name="line.60"></a>
+<span class="sourceLineNo">061</span>    }<a name="line.61"></a>
+<span class="sourceLineNo">062</span>    return color;<a name="line.62"></a>
+<span class="sourceLineNo">063</span>  }<a name="line.63"></a>
+<span class="sourceLineNo">064</span><a name="line.64"></a>
+<span class="sourceLineNo">065</span>  @SuppressWarnings("boxing")<a name="line.65"></a>
+<span class="sourceLineNo">066</span>  private static Font getFont(int size) {<a name="line.66"></a>
+<span class="sourceLineNo">067</span>    if (size &gt; 5) {<a name="line.67"></a>
+<span class="sourceLineNo">068</span>      Font font = FNT_CACHE.get(size);<a name="line.68"></a>
+<span class="sourceLineNo">069</span>      if (null == font) {<a name="line.69"></a>
+<span class="sourceLineNo">070</span>        font = new Font("SansSerif", Font.PLAIN, size);<a name="line.70"></a>
+<span class="sourceLineNo">071</span>        FNT_CACHE.put(size, font);<a name="line.71"></a>
+<span class="sourceLineNo">072</span>      }<a name="line.72"></a>
+<span class="sourceLineNo">073</span>      return font;<a name="line.73"></a>
+<span class="sourceLineNo">074</span>    }<a name="line.74"></a>
+<span class="sourceLineNo">075</span>    return null;<a name="line.75"></a>
+<span class="sourceLineNo">076</span>  }<a name="line.76"></a>
+<span class="sourceLineNo">077</span><a name="line.77"></a>
+<span class="sourceLineNo">078</span>  // render source data (final can be used by several threads)<a name="line.78"></a>
+<span class="sourceLineNo">079</span>  private final MapSource map;<a name="line.79"></a>
+<span class="sourceLineNo">080</span>  private final BoundingBox bb;<a name="line.80"></a>
+<span class="sourceLineNo">081</span>  private final RuleSet rules;<a name="line.81"></a>
+<span class="sourceLineNo">082</span>  private final int resolution;<a name="line.82"></a>
+<span class="sourceLineNo">083</span><a name="line.83"></a>
+<span class="sourceLineNo">084</span>  // Utility function<a name="line.84"></a>
+<span class="sourceLineNo">085</span>  private static int clamp(int val, int min, int max) {<a name="line.85"></a>
+<span class="sourceLineNo">086</span>    if (val &lt; min) {<a name="line.86"></a>
+<span class="sourceLineNo">087</span>      return min;<a name="line.87"></a>
+<span class="sourceLineNo">088</span>    } else if (val &gt; max) {<a name="line.88"></a>
+<span class="sourceLineNo">089</span>      return max;<a name="line.89"></a>
+<span class="sourceLineNo">090</span>    }<a name="line.90"></a>
+<span class="sourceLineNo">091</span>    return val;<a name="line.91"></a>
+<span class="sourceLineNo">092</span>  }<a name="line.92"></a>
+<span class="sourceLineNo">093</span><a name="line.93"></a>
+<span class="sourceLineNo">094</span>  // utility function<a name="line.94"></a>
+<span class="sourceLineNo">095</span>  private static int linesize(int z) {<a name="line.95"></a>
+<span class="sourceLineNo">096</span>    return z &lt; 12 ? 1 : z == 18 ? 6 : (int) (pow(2, z - 12) / (z - 12 + 1));<a name="line.96"></a>
+<span class="sourceLineNo">097</span>  }<a name="line.97"></a>
+<span class="sourceLineNo">098</span>  <a name="line.98"></a>
+<span class="sourceLineNo">099</span>  /**<a name="line.99"></a>
+<span class="sourceLineNo">100</span>   * Creates a thread safe renderer<a name="line.100"></a>
+<span class="sourceLineNo">101</span>   * <a name="line.101"></a>
+<span class="sourceLineNo">102</span>   * @param rules RuleSet that describe how to render<a name="line.102"></a>
+<span class="sourceLineNo">103</span>   * @param map Parsed Map data<a name="line.103"></a>
+<span class="sourceLineNo">104</span>   * @throws com.jetdrone.map.MapException Bad parameters<a name="line.104"></a>
+<span class="sourceLineNo">105</span>   */<a name="line.105"></a>
+<span class="sourceLineNo">106</span>  public Renderer(RuleSet rules, MapSource map) throws MapException {<a name="line.106"></a>
+<span class="sourceLineNo">107</span>    this(rules, map, DEFAULT_RESOLUTION);<a name="line.107"></a>
+<span class="sourceLineNo">108</span>  }<a name="line.108"></a>
+<span class="sourceLineNo">109</span><a name="line.109"></a>
+<span class="sourceLineNo">110</span>  /**<a name="line.110"></a>
+<span class="sourceLineNo">111</span>   * Creates a thread safe renderer<a name="line.111"></a>
+<span class="sourceLineNo">112</span>   * <a name="line.112"></a>
+<span class="sourceLineNo">113</span>   * @param rules RuleSet that describe how to render<a name="line.113"></a>
+<span class="sourceLineNo">114</span>   * @param map Parsed Map data<a name="line.114"></a>
+<span class="sourceLineNo">115</span>   * @param resolution size of the tile<a name="line.115"></a>
+<span class="sourceLineNo">116</span>   * @throws com.jetdrone.map.MapException Bad parameters<a name="line.116"></a>
+<span class="sourceLineNo">117</span>   */<a name="line.117"></a>
+<span class="sourceLineNo">118</span>  public Renderer(RuleSet rules, MapSource map, int resolution) throws MapException {<a name="line.118"></a>
+<span class="sourceLineNo">119</span>    if (rules == null || map == null) {<a name="line.119"></a>
+<span class="sourceLineNo">120</span>      throw new MapException("No map and/or rules data");<a name="line.120"></a>
+<span class="sourceLineNo">121</span>    }<a name="line.121"></a>
+<span class="sourceLineNo">122</span>    <a name="line.122"></a>
+<span class="sourceLineNo">123</span>    this.map = map;<a name="line.123"></a>
+<span class="sourceLineNo">124</span>    this.bb = map.getBoundingBox();<a name="line.124"></a>
+<span class="sourceLineNo">125</span>    this.rules = rules;<a name="line.125"></a>
+<span class="sourceLineNo">126</span>    this.resolution = resolution;<a name="line.126"></a>
+<span class="sourceLineNo">127</span>  }<a name="line.127"></a>
+<span class="sourceLineNo">128</span><a name="line.128"></a>
+<span class="sourceLineNo">129</span>  public boolean tileHasData(int x, int y, int zoom_level) {<a name="line.129"></a>
+<span class="sourceLineNo">130</span><a name="line.130"></a>
+<span class="sourceLineNo">131</span>    int minx, miny, maxx, maxy;<a name="line.131"></a>
+<span class="sourceLineNo">132</span><a name="line.132"></a>
+<span class="sourceLineNo">133</span>    int c_zoom_level = clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);<a name="line.133"></a>
+<span class="sourceLineNo">134</span><a name="line.134"></a>
+<span class="sourceLineNo">135</span>    minx = lon2tilex(bb.getMinLon(), c_zoom_level);<a name="line.135"></a>
+<span class="sourceLineNo">136</span>    miny = lat2tiley(bb.getMaxLat(), c_zoom_level);<a name="line.136"></a>
+<span class="sourceLineNo">137</span>    maxx = lon2tilex(bb.getMaxLon(), c_zoom_level);<a name="line.137"></a>
+<span class="sourceLineNo">138</span>    maxy = lat2tiley(bb.getMinLat(), c_zoom_level);<a name="line.138"></a>
+<span class="sourceLineNo">139</span><a name="line.139"></a>
+<span class="sourceLineNo">140</span>    return !(x &lt; minx || x &gt; maxx || y &lt; miny || y &gt; maxy);<a name="line.140"></a>
+<span class="sourceLineNo">141</span>  }<a name="line.141"></a>
+<span class="sourceLineNo">142</span><a name="line.142"></a>
+<span class="sourceLineNo">143</span>  public int getMinXTile(int zoom_level) {<a name="line.143"></a>
+<span class="sourceLineNo">144</span>    return lon2tilex(bb.getMinLon(), clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL));<a name="line.144"></a>
+<span class="sourceLineNo">145</span>  }<a name="line.145"></a>
+<span class="sourceLineNo">146</span><a name="line.146"></a>
+<span class="sourceLineNo">147</span>  public int getMaxXTile(int zoom_level) {<a name="line.147"></a>
+<span class="sourceLineNo">148</span>    return lon2tilex(bb.getMaxLon(), clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL));<a name="line.148"></a>
+<span class="sourceLineNo">149</span>  }<a name="line.149"></a>
+<span class="sourceLineNo">150</span><a name="line.150"></a>
+<span class="sourceLineNo">151</span>  public int getMinYTile(int zoom_level) {<a name="line.151"></a>
+<span class="sourceLineNo">152</span>    return lat2tiley(bb.getMaxLat(), clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL));<a name="line.152"></a>
+<span class="sourceLineNo">153</span>  }<a name="line.153"></a>
+<span class="sourceLineNo">154</span><a name="line.154"></a>
+<span class="sourceLineNo">155</span>  public int getMaxYTile(int zoom_level) {<a name="line.155"></a>
+<span class="sourceLineNo">156</span>    return lat2tiley(bb.getMinLat(), clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL));<a name="line.156"></a>
+<span class="sourceLineNo">157</span>  }<a name="line.157"></a>
+<span class="sourceLineNo">158</span><a name="line.158"></a>
+<span class="sourceLineNo">159</span>  public void drawMap(final String filename, final int zoom_level) throws IOException {<a name="line.159"></a>
+<span class="sourceLineNo">160</span><a name="line.160"></a>
+<span class="sourceLineNo">161</span>    int c_zoom_level = clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);<a name="line.161"></a>
+<span class="sourceLineNo">162</span><a name="line.162"></a>
+<span class="sourceLineNo">163</span>    Coordinate min = coord2xy(bb.getMinLat(), bb.getMinLon(), c_zoom_level, resolution);<a name="line.163"></a>
+<span class="sourceLineNo">164</span>    Coordinate max = coord2xy(bb.getMaxLat(), bb.getMaxLon(), c_zoom_level, resolution);<a name="line.164"></a>
+<span class="sourceLineNo">165</span><a name="line.165"></a>
+<span class="sourceLineNo">166</span>    int w = (int) ceil(max.x - min.x);<a name="line.166"></a>
+<span class="sourceLineNo">167</span>    int h = (int) ceil(min.y - max.y);<a name="line.167"></a>
+<span class="sourceLineNo">168</span><a name="line.168"></a>
+<span class="sourceLineNo">169</span>    Coordinate offset = coord2xy(bb.getMaxLat(), bb.getMinLon(), c_zoom_level, resolution);<a name="line.169"></a>
+<span class="sourceLineNo">170</span>    MapSurface surface = new MapSurface(w, h, rules.getBgColor(), c_zoom_level, offset, bb);<a name="line.170"></a>
+<span class="sourceLineNo">171</span>    List&lt;Way&gt; mapData = map.getWaysInBoundingBox(bb);<a name="line.171"></a>
+<span class="sourceLineNo">172</span>    render(surface, mapData);<a name="line.172"></a>
+<span class="sourceLineNo">173</span><a name="line.173"></a>
+<span class="sourceLineNo">174</span>    surface.write(filename);<a name="line.174"></a>
+<span class="sourceLineNo">175</span>    surface.flush();<a name="line.175"></a>
+<span class="sourceLineNo">176</span>  }<a name="line.176"></a>
+<span class="sourceLineNo">177</span>  <a name="line.177"></a>
+<span class="sourceLineNo">178</span>  public void drawTile(final String filename, final int x, final int y, final int zoom_level) throws IOException {<a name="line.178"></a>
+<span class="sourceLineNo">179</span><a name="line.179"></a>
+<span class="sourceLineNo">180</span>    int c_zoom_level = clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);<a name="line.180"></a>
+<span class="sourceLineNo">181</span>    Coordinate crd = tile2latlon(x, y, c_zoom_level);<a name="line.181"></a>
+<span class="sourceLineNo">182</span>    <a name="line.182"></a>
+<span class="sourceLineNo">183</span>    Coordinate offset = coord2xy(crd.x, crd.y, c_zoom_level, resolution);<a name="line.183"></a>
+<span class="sourceLineNo">184</span>    BoundingBox bbox = Mercator.tileEdges(x, y, c_zoom_level);<a name="line.184"></a>
+<span class="sourceLineNo">185</span>    <a name="line.185"></a>
+<span class="sourceLineNo">186</span>    MapSurface surface = new MapSurface(resolution, resolution, rules.getBgColor(), c_zoom_level, offset, bbox);<a name="line.186"></a>
+<span class="sourceLineNo">187</span>    List&lt;Way&gt; mapData = map.getWaysInBoundingBox(bbox);<a name="line.187"></a>
+<span class="sourceLineNo">188</span>    render(surface, mapData);<a name="line.188"></a>
+<span class="sourceLineNo">189</span><a name="line.189"></a>
+<span class="sourceLineNo">190</span>    surface.write(filename);<a name="line.190"></a>
+<span class="sourceLineNo">191</span>    surface.flush();<a name="line.191"></a>
+<span class="sourceLineNo">192</span>  }<a name="line.192"></a>
+<span class="sourceLineNo">193</span><a name="line.193"></a>
+<span class="sourceLineNo">194</span>  public void drawTile(final OutputStream out, final int x, final int y, final int zoom_level) throws IOException {<a name="line.194"></a>
+<span class="sourceLineNo">195</span><a name="line.195"></a>
+<span class="sourceLineNo">196</span>    int c_zoom_level = clamp(zoom_level, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);<a name="line.196"></a>
+<span class="sourceLineNo">197</span>    Coordinate crd = tile2latlon(x, y, c_zoom_level);<a name="line.197"></a>
+<span class="sourceLineNo">198</span>    <a name="line.198"></a>
+<span class="sourceLineNo">199</span>    Coordinate offset = coord2xy(crd.x, crd.y, c_zoom_level, resolution);<a name="line.199"></a>
+<span class="sourceLineNo">200</span>    BoundingBox bbox = Mercator.tileEdges(x, y, c_zoom_level);<a name="line.200"></a>
+<span class="sourceLineNo">201</span>    <a name="line.201"></a>
+<span class="sourceLineNo">202</span>    MapSurface surface = new MapSurface(resolution, resolution, rules.getBgColor(), c_zoom_level, offset, bbox);<a name="line.202"></a>
+<span class="sourceLineNo">203</span>    List&lt;Way&gt; mapData = map.getWaysInBoundingBox(bbox);<a name="line.203"></a>
+<span class="sourceLineNo">204</span>    render(surface, mapData);<a name="line.204"></a>
+<span class="sourceLineNo">205</span><a name="line.205"></a>
+<span class="sourceLineNo">206</span>    surface.write(out);<a name="line.206"></a>
+<span class="sourceLineNo">207</span>    surface.flush();<a name="line.207"></a>
+<span class="sourceLineNo">208</span>  }<a name="line.208"></a>
+<span class="sourceLineNo">209</span>  <a name="line.209"></a>
+<span class="sourceLineNo">210</span>  private void render(final MapSurface surface, final List&lt;Way&gt; mapData) {<a name="line.210"></a>
+<span class="sourceLineNo">211</span>    // Start checking osm from bottom layer.<a name="line.211"></a>
+<span class="sourceLineNo">212</span>    for (int layer = -5; layer &lt;= 5; layer++) {<a name="line.212"></a>
+<span class="sourceLineNo">213</span>      // Process Rule by Rule<a name="line.213"></a>
+<span class="sourceLineNo">214</span>      for (Rule rule = rules.root(); rule != null; rule = rule.next()) {<a name="line.214"></a>
+<span class="sourceLineNo">215</span>        if (rule.getDraw() != null) {<a name="line.215"></a>
+<span class="sourceLineNo">216</span>          renderPaths(surface, layer, rule, rule.getDraw(), mapData);<a name="line.216"></a>
+<span class="sourceLineNo">217</span>          // Text Rendering<a name="line.217"></a>
+<span class="sourceLineNo">218</span>          renderText(surface, layer, rule, rule.getDraw(), mapData);<a name="line.218"></a>
+<span class="sourceLineNo">219</span>        }<a name="line.219"></a>
+<span class="sourceLineNo">220</span>      }<a name="line.220"></a>
+<span class="sourceLineNo">221</span>    }<a name="line.221"></a>
+<span class="sourceLineNo">222</span>  }<a name="line.222"></a>
+<span class="sourceLineNo">223</span><a name="line.223"></a>
+<span class="sourceLineNo">224</span>  private void renderPaths(MapSurface surface, int layer, Rule rule, Draw draw, final List&lt;Way&gt; mapData) {<a name="line.224"></a>
+<span class="sourceLineNo">225</span>    int paths = 0;<a name="line.225"></a>
+<span class="sourceLineNo">226</span>    Draw d = draw;<a name="line.226"></a>
+<span class="sourceLineNo">227</span>    surface.path.reset();<a name="line.227"></a>
+<span class="sourceLineNo">228</span>    <a name="line.228"></a>
+<span class="sourceLineNo">229</span>    // Loop through ways for<a name="line.229"></a>
+<span class="sourceLineNo">230</span>    for (Way way : mapData) {<a name="line.230"></a>
+<span class="sourceLineNo">231</span>      // perform geometry culling. If an object is not on the current layer or<a name="line.231"></a>
+<span class="sourceLineNo">232</span>      // inside the tile bounding box, it can be skipped<a name="line.232"></a>
+<span class="sourceLineNo">233</span>      if (way.getLayer() != layer) continue;<a name="line.233"></a>
+<span class="sourceLineNo">234</span>      Map&lt;String, String&gt; tags = way.getTags();<a name="line.234"></a>
+<span class="sourceLineNo">235</span>      if(tags != null) {<a name="line.235"></a>
+<span class="sourceLineNo">236</span>        if (RuleSet.checkRule(rule, tags)) {<a name="line.236"></a>
+<span class="sourceLineNo">237</span>          paths += buildPath(surface, way.getWayNode());<a name="line.237"></a>
+<span class="sourceLineNo">238</span>        }<a name="line.238"></a>
+<span class="sourceLineNo">239</span>      }<a name="line.239"></a>
+<span class="sourceLineNo">240</span>    }<a name="line.240"></a>
+<span class="sourceLineNo">241</span>    if (paths != 0) {<a name="line.241"></a>
+<span class="sourceLineNo">242</span>      <a name="line.242"></a>
+<span class="sourceLineNo">243</span>      Graphics2D graphics = surface.getGraphics();<a name="line.243"></a>
+<span class="sourceLineNo">244</span>      <a name="line.244"></a>
+<span class="sourceLineNo">245</span>      while (d != null) {<a name="line.245"></a>
+<span class="sourceLineNo">246</span>        if (d.getMinZoom() &gt; surface.zoomLevel || d.getMaxZoom() &lt; surface.zoomLevel) {<a name="line.246"></a>
+<span class="sourceLineNo">247</span>          d = d.next();<a name="line.247"></a>
+<span class="sourceLineNo">248</span>          continue;<a name="line.248"></a>
+<span class="sourceLineNo">249</span>        }<a name="line.249"></a>
+<span class="sourceLineNo">250</span>        switch (d.type) {<a name="line.250"></a>
+<span class="sourceLineNo">251</span>        case Draw.POLYGONE:<a name="line.251"></a>
+<span class="sourceLineNo">252</span>          graphics.setPaint(getPaint(d.getPattern(), d.getColor()));<a name="line.252"></a>
+<span class="sourceLineNo">253</span>          graphics.fill(surface.path);<a name="line.253"></a>
+<span class="sourceLineNo">254</span>          break;<a name="line.254"></a>
+<span class="sourceLineNo">255</span>        case Draw.LINE:<a name="line.255"></a>
+<span class="sourceLineNo">256</span>          float strokeWidth = d.getWidth() * linesize(surface.zoomLevel);<a name="line.256"></a>
+<span class="sourceLineNo">257</span>          if(strokeWidth &gt; 0.5f) {<a name="line.257"></a>
+<span class="sourceLineNo">258</span>            Stroke stroke = new BasicStroke(<a name="line.258"></a>
+<span class="sourceLineNo">259</span>                strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);<a name="line.259"></a>
+<span class="sourceLineNo">260</span>  <a name="line.260"></a>
+<span class="sourceLineNo">261</span>            graphics.setPaint(d.getColor());<a name="line.261"></a>
+<span class="sourceLineNo">262</span>            graphics.setStroke(stroke);<a name="line.262"></a>
+<span class="sourceLineNo">263</span>            graphics.draw(surface.path);<a name="line.263"></a>
+<span class="sourceLineNo">264</span>          }<a name="line.264"></a>
+<span class="sourceLineNo">265</span>          break;<a name="line.265"></a>
+<span class="sourceLineNo">266</span>//        case Draw.TEXT:<a name="line.266"></a>
+<span class="sourceLineNo">267</span>//          break; /* ignore */<a name="line.267"></a>
+<span class="sourceLineNo">268</span>        }<a name="line.268"></a>
+<span class="sourceLineNo">269</span>        d = d.next();<a name="line.269"></a>
+<span class="sourceLineNo">270</span>      }<a name="line.270"></a>
+<span class="sourceLineNo">271</span>    }<a name="line.271"></a>
+<span class="sourceLineNo">272</span>  }<a name="line.272"></a>
+<span class="sourceLineNo">273</span><a name="line.273"></a>
+<span class="sourceLineNo">274</span>  private int buildPath(MapSurface surface, List&lt;Node&gt; nodes) {<a name="line.274"></a>
+<span class="sourceLineNo">275</span>    Node nd = nodes.get(0);<a name="line.275"></a>
+<span class="sourceLineNo">276</span>    Coordinate xy0 = coord2xy(nd.getLat(), nd.getLon(), surface.zoomLevel, resolution);<a name="line.276"></a>
+<span class="sourceLineNo">277</span>    surface.path.moveTo(xy0.x - surface.offset.x, xy0.y - surface.offset.y);<a name="line.277"></a>
+<span class="sourceLineNo">278</span><a name="line.278"></a>
+<span class="sourceLineNo">279</span>    Coordinate xy;<a name="line.279"></a>
+<span class="sourceLineNo">280</span>    int paths = 0;<a name="line.280"></a>
+<span class="sourceLineNo">281</span>    for (int i = 1; i &lt; nodes.size(); i++) {<a name="line.281"></a>
+<span class="sourceLineNo">282</span>      nd = nodes.get(i);<a name="line.282"></a>
+<span class="sourceLineNo">283</span>      xy = coord2xy(nd.getLat(), nd.getLon(), surface.zoomLevel, resolution);<a name="line.283"></a>
+<span class="sourceLineNo">284</span>      if(xy0.x != xy.x &amp;&amp; xy0.y != xy.y) {<a name="line.284"></a>
+<span class="sourceLineNo">285</span>        surface.path.lineTo(xy.x - surface.offset.x, xy.y - surface.offset.y);<a name="line.285"></a>
+<span class="sourceLineNo">286</span>        paths++;<a name="line.286"></a>
+<span class="sourceLineNo">287</span>      }<a name="line.287"></a>
+<span class="sourceLineNo">288</span>      xy0 = xy;<a name="line.288"></a>
+<span class="sourceLineNo">289</span>    }<a name="line.289"></a>
+<span class="sourceLineNo">290</span>    return paths;<a name="line.290"></a>
+<span class="sourceLineNo">291</span>  }<a name="line.291"></a>
+<span class="sourceLineNo">292</span><a name="line.292"></a>
+<span class="sourceLineNo">293</span>  private void renderText(MapSurface surface, int layer, Rule rule, Draw draw, final List&lt;Way&gt; mapData) {<a name="line.293"></a>
+<span class="sourceLineNo">294</span>    Graphics2D graphics = surface.getGraphics();<a name="line.294"></a>
+<span class="sourceLineNo">295</span>    Draw d = draw;<a name="line.295"></a>
+<span class="sourceLineNo">296</span><a name="line.296"></a>
+<span class="sourceLineNo">297</span>    while (d != null) {<a name="line.297"></a>
+<span class="sourceLineNo">298</span>      Font font = getFont((int) (d.getWidth() * linesize(surface.zoomLevel)));<a name="line.298"></a>
+<span class="sourceLineNo">299</span><a name="line.299"></a>
+<span class="sourceLineNo">300</span>      if (d.type == Draw.TEXT &amp;&amp; font != null) {<a name="line.300"></a>
+<span class="sourceLineNo">301</span>        if (draw.getMinZoom() &lt;= surface.zoomLevel &amp;&amp; surface.zoomLevel &lt;= draw.getMaxZoom()) {<a name="line.301"></a>
+<span class="sourceLineNo">302</span><a name="line.302"></a>
+<span class="sourceLineNo">303</span>          for (Way way : mapData) {<a name="line.303"></a>
+<span class="sourceLineNo">304</span>            // Only objects on current layer<a name="line.304"></a>
+<span class="sourceLineNo">305</span>            if (way.getLayer() != layer || way.getName() == null)<a name="line.305"></a>
+<span class="sourceLineNo">306</span>              continue;<a name="line.306"></a>
+<span class="sourceLineNo">307</span><a name="line.307"></a>
+<span class="sourceLineNo">308</span>            Map&lt;String, String&gt; tags = way.getTags();<a name="line.308"></a>
+<span class="sourceLineNo">309</span>            if(tags != null) {<a name="line.309"></a>
+<span class="sourceLineNo">310</span>              if (RuleSet.checkRule(rule, tags)) {<a name="line.310"></a>
+<span class="sourceLineNo">311</span>                // TODO: verify if there is a path and render text<a name="line.311"></a>
+<span class="sourceLineNo">312</span>                // along the path? or see how osmarender does it?<a name="line.312"></a>
+<span class="sourceLineNo">313</span>                graphics.setFont(font);<a name="line.313"></a>
+<span class="sourceLineNo">314</span>                graphics.setPaint(d.getColor());<a name="line.314"></a>
+<span class="sourceLineNo">315</span>                Node nd = way.getWayNode().get(0);<a name="line.315"></a>
+<span class="sourceLineNo">316</span>                Coordinate xy = coord2xy(<a name="line.316"></a>
+<span class="sourceLineNo">317</span>                    nd.getLat(), nd.getLon(), surface.zoomLevel, resolution);<a name="line.317"></a>
+<span class="sourceLineNo">318</span>  <a name="line.318"></a>
+<span class="sourceLineNo">319</span>                graphics.drawString(<a name="line.319"></a>
+<span class="sourceLineNo">320</span>                    way.getName(),<a name="line.320"></a>
+<span class="sourceLineNo">321</span>                    (int) (xy.x - surface.offset.x),<a name="line.321"></a>
+<span class="sourceLineNo">322</span>                    (int) (xy.y - surface.offset.y));<a name="line.322"></a>
+<span class="sourceLineNo">323</span>              }<a name="line.323"></a>
+<span class="sourceLineNo">324</span>            }<a name="line.324"></a>
+<span class="sourceLineNo">325</span>          }<a name="line.325"></a>
+<span class="sourceLineNo">326</span>        }<a name="line.326"></a>
+<span class="sourceLineNo">327</span>        break;<a name="line.327"></a>
+<span class="sourceLineNo">328</span>      }<a name="line.328"></a>
+<span class="sourceLineNo">329</span>      d = d.next();<a name="line.329"></a>
+<span class="sourceLineNo">330</span>    }<a name="line.330"></a>
+<span class="sourceLineNo">331</span>  }<a name="line.331"></a>
+<span class="sourceLineNo">332</span>}<a name="line.332"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+</div>
+</body>
+</html>
