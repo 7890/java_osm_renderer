@@ -55,13 +55,13 @@ public class MapRender {
 		
 		File outdir = new File(Options.outdir);
 		if (!outdir.exists())
-			System.out.println("Create missing directories: " + outdir.mkdirs());
+			System.err.println("Create missing directories: " + outdir.mkdirs());
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			final long t0 = System.nanoTime();
 			
 			public void run() {
-				System.out.println("Total render time: " + (System.nanoTime() - t0) + "ns");
+				System.err.println("Total render time: " + (System.nanoTime() - t0) + "ns");
 			}
 		});
 		
