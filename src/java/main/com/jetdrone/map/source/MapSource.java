@@ -70,6 +70,11 @@ public class MapSource extends OSMReader {
 	
 	@Override
 	public void indexWay(Way w) {
+		if(wayIndex==null)
+		{
+			System.err.println("wayIndex was null");
+			wayIndex = new QTree<Way>(new BoundingBox(1,1,50,50));
+		}
 		wayIndex.add(w);
 	}
 	
@@ -79,6 +84,7 @@ public class MapSource extends OSMReader {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		new MapSource("WebContent/WEB-INF/classes/netherlands.osm");
+		//new MapSource("WebContent/WEB-INF/classes/netherlands.osm");
+		new MapSource(args[0]);
 	}
 }
