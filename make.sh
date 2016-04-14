@@ -73,7 +73,7 @@ mkdir -p "$build"
 rm -rf "$build"/*
 
 compile_simple-osm-render
-create_javadoc
+#create_javadoc
 
 echo ""
 echo "done."
