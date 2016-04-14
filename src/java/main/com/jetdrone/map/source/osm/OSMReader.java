@@ -20,7 +20,7 @@ import com.jetdrone.map.source.Way;
 
 public abstract class OSMReader extends DefaultHandler {
 	
-	Map<Integer, Node> nodeidx = new HashMap<Integer, Node>(); // Node Hash
+	Map<Long, Node> nodeidx = new HashMap<Long, Node>(); // Node Hash
 
 	private Node cNode = null;
 	private Way cWay = null;
@@ -72,7 +72,24 @@ public abstract class OSMReader extends DefaultHandler {
 		// Parsing Node
 		else if ("node".equals(qName)) {
 //			LOG.fine("Parsing Node");
-			int id = Integer.parseInt(attributes.getValue("id"));
+//			int id = Integer.parseInt(attributes.getValue("id"));
+/*
+using long instead of int prevents
+
+Exception in thread "main" java.lang.NumberFormatException: For input string: "2147489458"
+	at java.lang.NumberFormatException.forInputString(NumberFormatException.java:65)
+	at java.lang.Integer.parseInt(Integer.java:495)
+	at java.lang.Integer.parseInt(Integer.java:527)
+	at com.jetdrone.map.source.osm.OSMReader.startElement(OSMReader.java:75)
+	at com.sun.org.apache.xerces.internal.parsers.AbstractSAXParser.startElement(AbstractSAXParser.java:509)
+	at com.sun.org.apache.xerces.internal.parsers.AbstractXMLDocumentParser.emptyElement(AbstractXMLDocumentParser.java:182)
+
+ids in OSM data seem to be too loarge for int
+
+*/
+
+			long id = Long.parseLong(attributes.getValue("id"));
+
 			cNode = new Node(
 					Double.parseDouble(attributes.getValue("lat")),
 					Double.parseDouble(attributes.getValue("lon")));
@@ -127,7 +144,7 @@ public abstract class OSMReader extends DefaultHandler {
 		// Parsing WayNode
 		else if ("nd".equals(qName)) {
 //			LOG.fine("Parsing Nd");
-			int ref = Integer.parseInt(attributes.getValue("ref"));
+			long ref = Long.parseLong(attributes.getValue("ref"));
 
 			if (ref != 0) {
 				Node n;
