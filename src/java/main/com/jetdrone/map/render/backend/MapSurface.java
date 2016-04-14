@@ -53,35 +53,23 @@ public class MapSurface {
 	public final GeneralPath path;
 
 	static {
-		if (GraphicsEnvironment.isHeadless()) {
-			HEADLESS = true;
-			GC = null;
-		} else {
-			HEADLESS = false;
-			GC = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
-		}
+		HEADLESS = true;
+		GC = null;
 
-		RENDER_HINTS.put(KEY_ANTIALIASING, VALUE_ANTIALIAS_ON);
-		RENDER_HINTS.put(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY);
-		RENDER_HINTS.put(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
-		RENDER_HINTS.put(KEY_RENDERING, VALUE_RENDER_QUALITY);
+		RENDER_HINTS.put(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+		RENDER_HINTS.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		RENDER_HINTS.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+		RENDER_HINTS.put(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
+		RENDER_HINTS.put(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+		RENDER_HINTS.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+		RENDER_HINTS.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+//		RENDER_HINTS.put(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 		RENDER_HINTS.put(KEY_STROKE_CONTROL, VALUE_STROKE_NORMALIZE);
-		RENDER_HINTS.put(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_GASP);
 	}
 
 	public MapSurface(int width, int height, Color bg, int zoom_level, Coordinate offset, BoundingBox bounds) {
-		System.out.println(width + "x" + height);
-		if (HEADLESS) {
-			surface = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
-		} else {
-			if (width == 256 && height == 256) {
-				surface = GC.createCompatibleVolatileImage(256, 256);
-				surface.setAccelerationPriority(1);
-			} else {
-				surface = GC.createCompatibleImage(width, height);
-				surface.setAccelerationPriority(1);
-			}
-		}
+		System.err.println(width + "x" + height);
+		surface = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		graphics = (Graphics2D) surface.getGraphics();
 		path = new GeneralPath();
 
@@ -90,6 +78,7 @@ public class MapSurface {
 		this.bounds = bounds;
 		
 		graphics.setBackground(bg);
+//		graphics.setBackground(new Color(255,255,255,0));
 		graphics.clearRect(0, 0, width, height);
 		
 		graphics.setRenderingHints(RENDER_HINTS);
