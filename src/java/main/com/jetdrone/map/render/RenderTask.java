@@ -1,6 +1,7 @@
 package com.jetdrone.map.render;
 
 import java.io.IOException;
+import java.io.File;
 
 import com.jetdrone.map.render.backend.Renderer;
 
@@ -13,7 +14,20 @@ public class RenderTask implements Runnable {
 	@SuppressWarnings("boxing")
 	public RenderTask(Renderer renderer, int x, int y, int zoom_level) {
 		this.renderer = renderer;
-		this.filename = String.format("tiles/%d_%d.png", x, y);
+
+		File outdir = new File(""+String.format(Options.outdir+"/%d/%d/",zoom_level,x));
+		if (!outdir.exists())
+		{
+			if(outdir.mkdirs())
+			{
+				System.err.println("Created missing directories: " + outdir.getAbsolutePath());
+			}
+		}
+
+		//this.filename = String.format("tiles/%d_%d.png", x, y);
+
+		//   /tiles/z/x/x_y.png
+		this.filename = String.format(Options.outdir+"/%d/%d/%d_%d.png", zoom_level, x, x, y);
 		this.x = x;
 		this.y = y;
 		this.zoom_level = zoom_level;
@@ -22,6 +36,7 @@ public class RenderTask implements Runnable {
 	@Override
 	public void run() {
 		try {
+			System.err.println("Drawing tile "+filename+" zoom "+zoom_level);
 			renderer.drawTile(filename, x, y, zoom_level);
 		} catch (IOException e) {
 			System.err.println("Error: RenderTask[" + this + "] caused by [" + e + "]");
