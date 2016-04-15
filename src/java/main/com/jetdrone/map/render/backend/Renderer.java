@@ -38,7 +38,7 @@ import java.io.File;
 
 public class Renderer {
 
-	private static final int MIN_ZOOM_LEVEL = 12;
+	private static final int MIN_ZOOM_LEVEL = 2;
 	private static final int MAX_ZOOM_LEVEL = 18;
 
 	private static final int DEFAULT_RESOLUTION = 256;
@@ -53,9 +53,10 @@ public class Renderer {
 			if (null == paint) {
 				try {
 					//BufferedImage texture = ImageIO.read(Renderer.class.getResourceAsStream("pattern/" + pattern + ".png"));
-					BufferedImage texture = ImageIO.read(new File("resources/pattern" + pattern + ".png"));
+					BufferedImage texture = ImageIO.read(new File("resources/pattern/" + pattern + ".png"));
 					paint = new TexturePaint(texture, new Rectangle2D.Float(0, 0, texture.getWidth(), texture.getHeight()));
 				} catch (IOException e) {
+					System.err.println("pattern not found: "+pattern);
 					paint = color;
 				}
 				TEX_CACHE.put(pattern, paint);
