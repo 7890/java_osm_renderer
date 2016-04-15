@@ -68,7 +68,7 @@ public class MapSurface {
 	}
 
 	public MapSurface(int width, int height, Color bg, int zoom_level, Coordinate offset, BoundingBox bounds) {
-		System.err.println(width + "x" + height);
+//		System.err.println(width + "x" + height);
 		surface = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		graphics = (Graphics2D) surface.getGraphics();
 		path = new GeneralPath();
