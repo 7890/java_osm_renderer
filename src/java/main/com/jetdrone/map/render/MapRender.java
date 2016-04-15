@@ -12,13 +12,16 @@ import com.jetdrone.map.render.backend.Renderer;
 import com.jetdrone.map.rules.RuleSet;
 import com.jetdrone.map.source.MapSource;
 
-public class MapRender {
-
+//=============================================================================
+//=============================================================================
+public class MapRender
+{
 	private static final int RESOLUTION = 256;
 
 	// Start a Thread pool to share the load of this rendering task
 	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
+//=============================================================================
 	@SuppressWarnings("boxing")
 	private static void drawFullMap(Renderer renderer) throws IOException {
 		// Initialize all layers
@@ -29,6 +32,7 @@ public class MapRender {
 		}
 	}
 
+//=============================================================================
 	private static void drawTileMap(Renderer renderer, int zoom_level) throws IOException {
 		int maxx = renderer.getMaxXTile(zoom_level);
 		int maxy = renderer.getMaxYTile(zoom_level);
@@ -41,11 +45,14 @@ public class MapRender {
 		}
 	}
 
-	public static void main(String[] args) throws Exception {
+//=============================================================================
+	public static void main(String[] args) throws Exception
+	{
 
 //		new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
 
-		if (!Options.parse(args)) {
+		if (!Options.parse(args))
+		{
 			System.out.println("Usage: render -{m|t} [--zoom] [--minlayer] [--maxlayer] [-o DIR] <RULESFILE> <OSMFILE>");
 			System.exit(1);
 		}
@@ -57,23 +64,40 @@ public class MapRender {
 		if (!outdir.exists())
 			System.err.println("Create missing directories: " + outdir.mkdirs());
 		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
+		Runtime.getRuntime().addShutdownHook(new Thread()
+		{
 			final long t0 = System.nanoTime();
 			
-			public void run() {
+			public void run()
+			{
 				System.err.println("Total render time: " + (System.nanoTime() - t0)/1000/1000/1000 + " seconds");
 			}
 		});
 		
-		if (Options.mode == MAP) {
+		if (Options.mode == MAP)
+		{
 			drawFullMap(new Renderer(ruleset, map));
-		} else if (Options.mode == TILE) {
-			drawTileMap(new Renderer(ruleset, map, RESOLUTION), Options.zoom_level);
-		} else {
+		}
+		else if (Options.mode == TILE)
+		{
+			if(Options.zoom_level!=0)
+			{
+				drawTileMap(new Renderer(ruleset, map, RESOLUTION), Options.zoom_level);
+			}
+			else
+			{
+				for(int i=Options.minlayer; i<=Options.maxlayer;i++)
+				{
+					drawTileMap(new Renderer(ruleset, map, RESOLUTION), i);
+				}
+			}
+		}
+		else
+		{
 			System.out.println("Usage: render -{m|t} [--zoom] [--minlayer] [--maxlayer] [-o DIR] <RULESFILE> <OSMFILE>");
 			System.exit(1);
 		}
-
 		EXECUTOR.shutdown();
 	}
-}
+}//end class MapRender
+//EOF
