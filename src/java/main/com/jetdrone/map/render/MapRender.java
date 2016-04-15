@@ -61,7 +61,7 @@ public class MapRender {
 			final long t0 = System.nanoTime();
 			
 			public void run() {
-				System.err.println("Total render time: " + (System.nanoTime() - t0) + "ns");
+				System.err.println("Total render time: " + (System.nanoTime() - t0)/1000/1000/1000 + " seconds");
 			}
 		});
 		
