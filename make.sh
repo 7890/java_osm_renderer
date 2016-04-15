@@ -46,6 +46,8 @@ compile_simple-osm-render()
 
 	$JAVAC -classpath "$build"/servlet-api-3.1.jar:"$build" -sourcepath "$src/java/main" -d "$build" @"$TMPFILE"
 
+	ln -s "$src"/resources .
+
 	echo "create tiles:"
 	echo ""
 	echo "java -cp _build com.jetdrone.map.render.MapRender -t --zoom 14 -o tiles testdata/rule.xml testdata/amsterdam.osm"
