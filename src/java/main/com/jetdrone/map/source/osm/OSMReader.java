@@ -26,7 +26,13 @@ public abstract class OSMReader extends DefaultHandler {
 	private Way cWay = null;
 	
 	private static final Logger LOG = Logger.getLogger(OSMReader.class.getName());
-	
+
+	private long generic_parse_counter=0;
+	private long tag_parse_counter=0;
+	private long node_parse_counter=0;
+	private long way_parse_counter=0;
+	private long waynode_parse_counter=0;
+
 	public void load(InputStream stream) throws MapException {
 		try {
 			// Create a builder factory
@@ -45,7 +51,7 @@ public abstract class OSMReader extends DefaultHandler {
 			throw new MapException(e);
 		}
 	}
-	
+
 	@Override
 	@SuppressWarnings("boxing")
 	public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -71,6 +77,7 @@ public abstract class OSMReader extends DefaultHandler {
 		}
 		// Parsing Node
 		else if ("node".equals(qName)) {
+
 //			LOG.fine("Parsing Node");
 //			int id = Integer.parseInt(attributes.getValue("id"));
 /*
@@ -96,17 +103,17 @@ ids in OSM data seem to be too loarge for int
 
 			// Insert Node local hash
 			nodeidx.put(id, cNode);
+			node_parse_counter++;
 		}
 		// Parsing Tags
 		else if ("tag".equals(qName)) {
 //			LOG.fine("Parsing Tag");
 
-			if (cNode == null && cWay == null) // End if there is nothing to add
-												// the tag to
+			if (cNode == null && cWay == null) // End if there is nothing to add the tag to
+			{
 				return;
-
+			}
 			String k, v;
-
 			k = attributes.getValue("k").intern();
 			v = attributes.getValue("v").intern();
 			// attributes.getValue("created_by");
@@ -131,15 +138,20 @@ ids in OSM data seem to be too loarge for int
 				}
 			}
 
-			if (cNode != null)
+			if (cNode != null) {
 				cNode.insertTag(k, v);
-			else if (cWay != null)
+			}
+			else if (cWay != null) {
 				cWay.insertTag(k, v);
+			}
+
+			tag_parse_counter++;
 		}
 		// Parsing Way
 		else if ("way".equals(qName)) {
 //			LOG.fine("Parsing Way");
 			cWay = new Way();
+			way_parse_counter++;
 		}
 		// Parsing WayNode
 		else if ("nd".equals(qName)) {
@@ -159,8 +171,19 @@ ids in OSM data seem to be too loarge for int
 				cWay.addWayNode(n);
 				cNode = null;
 			}
+			waynode_parse_counter++;
 		}
-	}
+
+		generic_parse_counter++;
+		if(generic_parse_counter % 100000==0)
+		{
+			LOG.info("progress (every 100000 parse events): loaded "+node_parse_counter+" nodes, "
+				+tag_parse_counter+" tags, "
+				+way_parse_counter+" ways, "
+				+waynode_parse_counter+" waynodes."
+			);
+		}
+	}//end startElement()
 
 	@Override
 	public void endElement(String uri, String localName, String qName) throws SAXException {
