@@ -77,8 +77,8 @@ public class MapSurface {
 		this.offset = offset;
 		this.bounds = bounds;
 		
-		graphics.setBackground(bg);
-//		graphics.setBackground(new Color(255,255,255,0));
+//		graphics.setBackground(bg);
+		graphics.setBackground(new Color(255,255,255,0));
 		graphics.clearRect(0, 0, width, height);
 		
 		graphics.setRenderingHints(RENDER_HINTS);
