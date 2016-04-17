@@ -20,7 +20,6 @@ public class MapSource extends OSMReader {
 	
 	private static final Logger LOG = Logger.getLogger(MapSource.class.getName());
 
-
 	private QTree<Way> wayIndex;
 
 	@SuppressWarnings("unchecked")
@@ -28,13 +27,33 @@ public class MapSource extends OSMReader {
 		long tRead = System.currentTimeMillis();
 		File fIndex = new File(filename + ".idx");
 		if(fIndex.exists()) {
-			ObjectInputStream in = new ObjectInputStream(new FileInputStream(fIndex));
+			LOG.info("reading wayindex "+fIndex);
+
+			ObjectInputStream in=null;
+
+			if (java.awt.GraphicsEnvironment.isHeadless()) {
+				// non gui mode
+				in = new ObjectInputStream(new FileInputStream(fIndex));
+			} else {
+				// gui mode
+				in = new ObjectInputStream(
+					new javax.swing.ProgressMonitorInputStream(
+						null
+						,"Loading wayindex..."
+						,new FileInputStream(fIndex)
+					)
+				);
+			}
+
 			wayIndex = (QTree<Way>) in.readObject();
 			in.close();
 		} else {
+			LOG.info("loading "+filename);
 			FileInputStream in = new FileInputStream(filename);
 			load(in);
 			in.close();
+
+			LOG.info("writing wayindex "+fIndex);
 			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fIndex));
 			out.writeObject(wayIndex);
 			out.close();
@@ -44,8 +63,23 @@ public class MapSource extends OSMReader {
 
 	@SuppressWarnings("unchecked")
 	public MapSource(InputStream in) throws ClassNotFoundException, IOException {
+		LOG.info("reading wayindex from input stream");
 		long tRead = System.currentTimeMillis();
-		ObjectInputStream oin = new ObjectInputStream(in);
+//		ObjectInputStream oin = new ObjectInputStream(in);
+		ObjectInputStream oin = null;
+
+		if (java.awt.GraphicsEnvironment.isHeadless()) {
+			oin = new ObjectInputStream(in);
+		} else {
+			oin = new ObjectInputStream(
+				new javax.swing.ProgressMonitorInputStream(
+					null
+					,"Loading wayindex"
+					,in
+				)
+			);
+		}
+
 		wayIndex = (QTree<Way>) oin.readObject();
 		oin.close();
 		LOG.info("OSM loading done (" + ((System.currentTimeMillis() - tRead) / 1000f) + ") secs");
@@ -87,4 +121,6 @@ public class MapSource extends OSMReader {
 		//new MapSource("WebContent/WEB-INF/classes/netherlands.osm");
 		new MapSource(args[0]);
 	}
-}
+}//end class MapSource
+//EOF
+
