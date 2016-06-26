@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.BufferedInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.List;
@@ -31,16 +32,18 @@ public class MapSource extends OSMReader {
 
 			ObjectInputStream in=null;
 
+			//http://stackoverflow.com/questions/15863054/what-is-the-quickest-way-to-load-a-serialized-hashmap-in-java
+
 			if (java.awt.GraphicsEnvironment.isHeadless()) {
 				// non gui mode
-				in = new ObjectInputStream(new FileInputStream(fIndex));
+				in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(fIndex)));
 			} else {
 				// gui mode
 				in = new ObjectInputStream(
 					new javax.swing.ProgressMonitorInputStream(
 						null
 						,"Loading wayindex..."
-						,new FileInputStream(fIndex)
+						,new BufferedInputStream(new FileInputStream(fIndex))
 					)
 				);
 			}
@@ -59,7 +62,7 @@ public class MapSource extends OSMReader {
 			out.close();
 		}
 		LOG.info("OSM loading done (" + ((System.currentTimeMillis() - tRead) / 1000f) + ") secs");
-	}
+	}//end MapSource()
 
 	@SuppressWarnings("unchecked")
 	public MapSource(InputStream in) throws ClassNotFoundException, IOException {
@@ -123,4 +126,3 @@ public class MapSource extends OSMReader {
 	}
 }//end class MapSource
 //EOF
-
