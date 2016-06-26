@@ -257,11 +257,19 @@ public class Renderer {
 					graphics.fill(surface.path);
 					break;
 				case Draw.LINE:
+					/*
+					CAP_BUTT
+					CAP_ROUND
+					CAP_SQUARE
+					JOIN_BEVEL
+					JOIN_MITER
+					JOIN_ROUND
+					*/
 					float strokeWidth = d.getWidth() * linesize(surface.zoomLevel);
 					if(strokeWidth > 0.5f) {
 						Stroke stroke = new BasicStroke(
-								strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-	
+							strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+							///strokeWidth, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
 						graphics.setPaint(d.getColor());
 						graphics.setStroke(stroke);
 						graphics.draw(surface.path);
@@ -273,7 +281,7 @@ public class Renderer {
 				d = d.next();
 			}
 		}
-	}
+	}//end renderPaths()
 
 	private int buildPath(MapSurface surface, List<Node> nodes) {
 		Node nd = nodes.get(0);
@@ -332,5 +340,6 @@ public class Renderer {
 			}
 			d = d.next();
 		}
-	}
-}
+	}//end renderText()
+}//end class Renderer
+//EOF
