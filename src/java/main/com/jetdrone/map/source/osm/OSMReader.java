@@ -2,6 +2,7 @@ package com.jetdrone.map.source.osm;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.BufferedInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -39,7 +40,7 @@ public abstract class OSMReader extends DefaultHandler {
 			SAXParserFactory factory = SAXParserFactory.newInstance();
 			factory.setValidating(false);
 			// Create the builder and parse the file
-			factory.newSAXParser().parse(stream, this);
+			factory.newSAXParser().parse(new BufferedInputStream(stream), this);
 		
 			nodeidx.clear();
 			nodeidx = null;
