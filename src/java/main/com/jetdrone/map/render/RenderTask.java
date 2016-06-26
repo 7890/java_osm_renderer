@@ -22,6 +22,11 @@ public class RenderTask implements Runnable {
 			{
 				System.err.println("Created missing directories: " + outdir.getAbsolutePath());
 			}
+			else
+			{
+				System.err.println("/!\\ could not create missing directories: " + outdir.getAbsolutePath());
+				System.err.println("check permissions, free inodes on disk (df -i).");
+			}
 		}
 
 		//this.filename = String.format("tiles/%d_%d.png", x, y);
@@ -40,6 +45,7 @@ public class RenderTask implements Runnable {
 			renderer.drawTile(filename, x, y, zoom_level);
 		} catch (IOException e) {
 			System.err.println("Error: RenderTask[" + this + "] caused by [" + e + "]");
+			e.printStackTrace();
 		}
 	}
 }
